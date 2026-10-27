@@ -5,3 +5,11 @@ edition = "2024"
 
 [dependencies]
 rustyline = "19.0.0"
+
+[lints.rust]
+warnings = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"

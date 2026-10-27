@@ -4,3 +4,9 @@ cargo test --quiet || {
     echo "cargo test failed"
     exit 1
 }
+
+echo "Running cargo clippy before commit..."
+cargo clippy || {
+    echo "cargo clippy failed"
+    exit 1
+}

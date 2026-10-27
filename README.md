@@ -6,6 +6,7 @@ A mini SQL Engine on Rust
 
 - [x] Store data in memory (one table, typed columns, `CREATE TABLE`, `INSERT`, `INT`, `FLOAT`, `TEXT`, `BOOL`)
 - [x] Interactive terminal (REPL)
+- [ ] Own error type (`SqlError` enum) instead of `String` errors
 - [ ] `SELECT` with column lists, `*`, aliases, `DISTINCT`
 - [ ] `WHERE` with basic operators (`=`, `!=`, `<`, `>`, `AND`, `OR`, `NOT`, `IS NULL`)
 - [ ] `ORDER BY` and `LIMIT`

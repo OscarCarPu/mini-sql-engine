@@ -30,49 +30,57 @@ pub struct Database {
 }
 impl Database {
     pub fn run(&mut self, tokens: Vec<Token>) -> Result<QueryResult, String> {
-        if tokens[0] == Token::Select && tokens[1] == Token::Star {
-            if self.tables.is_empty() {
-                return Err("there isn't any tables".to_string());
-            }
-            let table = &self.tables[0];
-            let result = table.select_all();
-            return Ok(QueryResult::Rows(result.0.clone(), result.1.clone()));
+        match tokens.as_slice() {
+            [Token::Select, Token::Star, ..] => self.select_all(),
+            [Token::Create, rest @ ..] => self.create(rest),
+            _ => Err("unsopported query".to_string()),
         }
-        if tokens[0] == Token::Create {
-            let table_name = match &tokens[1] {
-                Token::Name(name) => name,
-                token_type => {
-                    return Err(format!("reserved key '{}' used for table name", token_type));
-                }
-            };
-            if tokens[2] != Token::Open {
-                return Err(format!("Expected '(' after table name, got {}", tokens[2]));
-            }
-            let mut columns: Vec<Column> = Vec::new();
-            for col in tokens[3..].split_last().unwrap().1.chunks(2) {
-                match col {
-                    [Token::Name(name), Token::Type(data_type)] => columns.push(Column {
-                        name: name.clone(),
-                        data_type: data_type.clone(),
-                    }),
-                    _ => return Err("invalid column definition".to_string()),
-                }
-            }
-            if tokens[3 + columns.len() * 2] != Token::Close {
-                return Err(format!(
-                    "Expected ')' after column definition, got {}",
-                    tokens[3 + columns.len() * 2]
-                ));
-            }
-            let table = Table::create(table_name.clone(), columns);
-            self.tables.push(table.clone());
-            return Ok(QueryResult::Created(table));
+    }
+
+    fn select_all(&self) -> Result<QueryResult, String> {
+        let table = self.tables.first().ok_or("there isn't any tables")?;
+        let (columns, rows) = table.select_all();
+        Ok(QueryResult::Rows(columns.clone(), rows.clone()))
+    }
+
+    fn create(&mut self, tokens: &[Token]) -> Result<QueryResult, String> {
+        let [name, open, rest @ ..] = tokens else {
+            return Err("unexpected end of query".to_string());
+        };
+        let Token::Name(table_name) = name else {
+            return Err(format!("reserved key '{}' used for table name", name));
+        };
+        if *open != Token::Open {
+            return Err(format!("Expected '(' after table name, got '{}'", open));
         }
-        Err("unsopported query".to_string())
+        let Some((close, defs)) = rest.split_last() else {
+            return Err("unexpected end of query".to_string());
+        };
+        if *close != Token::Close {
+            return Err(format!(
+                "Expected ')' after column definition, got {}",
+                close
+            ));
+        }
+        let columns = defs
+            .chunks(2)
+            .map(|col| match col {
+                [Token::Name(name), Token::Type(data_type)] => Ok(Column {
+                    name: name.clone(),
+                    data_type: data_type.clone(),
+                }),
+                _ => Err("invalid column definition".to_string()),
+            })
+            .collect::<Result<Vec<Column>, String>>()?;
+
+        let table = Table::create(table_name.clone(), columns);
+        self.tables.push(table.clone());
+        Ok(QueryResult::Created(table))
     }
 }
 
 #[cfg(test)]
+#[allow(clippy::indexing_slicing)]
 mod tests {
     use super::*;
     use crate::core::DataType;
