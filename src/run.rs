@@ -91,12 +91,16 @@ mod tests {
                 },
             ],
         );
-        table
-            .insert(vec![Value::Int(1), Value::Text("Ana".to_string())])
-            .unwrap();
-        table
-            .insert(vec![Value::Int(2), Value::Text("Pedro".to_string())])
-            .unwrap();
+        assert!(
+            table
+                .insert(vec![Value::Int(1), Value::Text("Ana".to_string())])
+                .is_ok()
+        );
+        assert!(
+            table
+                .insert(vec![Value::Int(2), Value::Text("Pedro".to_string())])
+                .is_ok()
+        );
         table
     }
 

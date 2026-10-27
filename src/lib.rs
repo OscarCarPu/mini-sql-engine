@@ -26,13 +26,15 @@ mod tests {
                 data_type: DataType::Int,
             }],
         );
-        table.insert(vec![Value::Int(1)]).unwrap();
+        assert!(table.insert(vec![Value::Int(1)]).is_ok());
 
         let mut database = Database {
             tables: vec![table],
         };
 
-        let output = execute("select *", &mut database).unwrap();
+        let Ok(output) = execute("select *", &mut database) else {
+            panic!("Got error on select ");
+        };
 
         assert_eq!(output, "id(Int)\n1\n");
     }
@@ -41,8 +43,12 @@ mod tests {
     fn create_then_select_query() {
         let mut database = Database { tables: vec![] };
 
-        let created = execute("CREATE PETS ( id INT name TEXT )", &mut database).unwrap();
-        let selected = execute("select *", &mut database).unwrap();
+        let Ok(created) = execute("CREATE PETS ( id INT name TEXT )", &mut database) else {
+            panic!("Got error on create pets");
+        };
+        let Ok(selected) = execute("select *", &mut database) else {
+            panic!("Got error on select")
+        };
 
         assert_eq!(created, "table 'PETS' created");
         assert_eq!(selected, "id(Int) | name(Text)\n");
