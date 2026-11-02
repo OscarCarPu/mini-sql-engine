@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::SqlError;
+
 #[derive(PartialEq, Clone, Debug)]
 pub enum DataType {
     Int,
@@ -81,22 +83,22 @@ impl Table {
         }
     }
 
-    pub fn insert(&mut self, row: Vec<Value>) -> Result<(), String> {
+    pub fn insert(&mut self, row: Vec<Value>) -> Result<(), SqlError> {
         if row.len() != self.columns.len() {
-            return Err(format!(
-                "expected {} columns, got {}",
-                self.columns.len(),
-                row.len()
-            ));
+            return Err(SqlError::ColumnCountMismatch {
+                expected: self.columns.len(),
+                got: row.len(),
+            });
         }
         for (r, col) in row.iter().zip(self.columns.iter()) {
             if let Some(row_type) = r.data_type()
                 && row_type != col.data_type
             {
-                return Err(format!(
-                    "on '{}' expected DataType {}, got {}",
-                    col.name, col.data_type, row_type
-                ));
+                return Err(SqlError::TypeMismatch {
+                    column: col.name.clone(),
+                    expected: col.data_type.clone(),
+                    got: row_type,
+                });
             }
         }
         self.rows.push(row);
@@ -161,7 +163,13 @@ mod tests {
 
         let result = table.insert(vec![Value::Int(1)]);
 
-        assert_eq!(result, Err("expected 2 columns, got 1".to_string()));
+        assert_eq!(
+            result,
+            Err(SqlError::ColumnCountMismatch {
+                expected: 2,
+                got: 1
+            })
+        );
         assert_eq!(table.rows.len(), 0);
     }
 
@@ -176,7 +184,11 @@ mod tests {
 
         assert_eq!(
             result,
-            Err("on 'id' expected DataType Int, got Text".to_string())
+            Err(SqlError::TypeMismatch {
+                column: "id".to_string(),
+                expected: DataType::Int,
+                got: DataType::Text
+            })
         );
         assert_eq!(table.rows.len(), 0);
     }

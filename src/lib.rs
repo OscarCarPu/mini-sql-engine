@@ -1,13 +1,15 @@
 // src/lib.rs
 mod core;
+mod error;
 mod run;
 mod tokenizer;
 
 pub use crate::core::{Column, DataType, Table, Value};
+pub use crate::error::SqlError;
 pub use crate::run::Database;
 pub use crate::tokenizer::tokenize;
 
-pub fn execute(sql: &str, database: &mut Database) -> Result<String, String> {
+pub fn execute(sql: &str, database: &mut Database) -> Result<String, SqlError> {
     let tokens = tokenize(sql)?;
     let result = database.run(tokens)?;
     Ok(result.to_string())

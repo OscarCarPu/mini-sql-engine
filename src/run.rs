@@ -1,4 +1,5 @@
 use crate::core::{Column, Table, Value};
+use crate::error::SqlError;
 use crate::tokenizer::Token;
 use std::fmt;
 
@@ -29,38 +30,39 @@ pub struct Database {
     pub tables: Vec<Table>,
 }
 impl Database {
-    pub fn run(&mut self, tokens: Vec<Token>) -> Result<QueryResult, String> {
+    pub fn run(&mut self, tokens: Vec<Token>) -> Result<QueryResult, SqlError> {
         match tokens.as_slice() {
             [Token::Select, Token::Star, ..] => self.select_all(),
             [Token::Create, rest @ ..] => self.create(rest),
-            _ => Err("unsopported query".to_string()),
+            _ => Err(SqlError::UnsupportedQuery),
         }
     }
 
-    fn select_all(&self) -> Result<QueryResult, String> {
-        let table = self.tables.first().ok_or("there isn't any tables")?;
+    fn select_all(&self) -> Result<QueryResult, SqlError> {
+        let table = self.tables.first().ok_or(SqlError::NoTables)?;
         let (columns, rows) = table.select_all();
         Ok(QueryResult::Rows(columns.clone(), rows.clone()))
     }
 
-    fn create(&mut self, tokens: &[Token]) -> Result<QueryResult, String> {
+    fn create(&mut self, tokens: &[Token]) -> Result<QueryResult, SqlError> {
         let [name, open, rest @ ..] = tokens else {
-            return Err("unexpected end of query".to_string());
+            return Err(SqlError::UnexpectedEnd);
         };
         let Token::Name(table_name) = name else {
-            return Err(format!("reserved key '{}' used for table name", name));
+            return Err(SqlError::ReservedName(name.to_string()));
         };
         if *open != Token::Open {
-            return Err(format!("Expected '(' after table name, got '{}'", open));
+            return Err(SqlError::ExpectedOpenParam {
+                found: open.to_string(),
+            });
         }
         let Some((close, defs)) = rest.split_last() else {
-            return Err("unexpected end of query".to_string());
+            return Err(SqlError::UnexpectedEnd);
         };
         if *close != Token::Close {
-            return Err(format!(
-                "Expected ')' after column definition, got {}",
-                close
-            ));
+            return Err(SqlError::ExpectedCloseParam {
+                found: close.to_string(),
+            });
         }
         let columns = defs
             .chunks(2)
@@ -69,9 +71,9 @@ impl Database {
                     name: name.clone(),
                     data_type: data_type.clone(),
                 }),
-                _ => Err("invalid column definition".to_string()),
+                _ => Err(SqlError::InvalidColumnDefinition),
             })
-            .collect::<Result<Vec<Column>, String>>()?;
+            .collect::<Result<Vec<Column>, SqlError>>()?;
 
         let table = Table::create(table_name.clone(), columns);
         self.tables.push(table.clone());

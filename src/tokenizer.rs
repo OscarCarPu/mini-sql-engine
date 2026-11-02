@@ -1,4 +1,5 @@
 use crate::core::DataType;
+use crate::error::SqlError;
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
@@ -31,7 +32,7 @@ impl fmt::Display for Token {
     }
 }
 
-pub fn tokenize(query: &str) -> Result<Vec<Token>, String> {
+pub fn tokenize(query: &str) -> Result<Vec<Token>, SqlError> {
     let spaced = query
         .replace('(', " ( ")
         .replace(')', " ) ")
