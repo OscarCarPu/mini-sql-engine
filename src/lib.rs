@@ -1,4 +1,3 @@
-// src/lib.rs
 mod core;
 mod error;
 mod run;

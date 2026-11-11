@@ -10,7 +10,7 @@ pub enum Token {
     Open,
     Close,
     Comma,
-    DotComma,
+    Semicolon,
     Type(DataType),
     Name(String),
 }
@@ -24,7 +24,7 @@ impl fmt::Display for Token {
             Token::Open => "(",
             Token::Close => ")",
             Token::Comma => ",",
-            Token::DotComma => ";",
+            Token::Semicolon => ";",
             Token::Type(data_type) => return write!(f, "{}", data_type),
             Token::Name(n) => n,
         };
@@ -51,7 +51,7 @@ pub fn tokenize(query: &str) -> Result<Vec<Token>, SqlError> {
             "(" => tokens.push(Token::Open),
             ")" => tokens.push(Token::Close),
             "," => tokens.push(Token::Comma),
-            ";" => tokens.push(Token::DotComma),
+            ";" => tokens.push(Token::Semicolon),
             _ => tokens.push(Token::Name(word.to_string())),
         }
     }
@@ -104,7 +104,7 @@ mod tests {
                 Token::Name("name".to_string()),
                 Token::Type(DataType::Text),
                 Token::Close,
-                Token::DotComma
+                Token::Semicolon
             ])
         )
     }
