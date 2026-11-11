@@ -1,16 +1,19 @@
 mod core;
 mod error;
+mod parser;
 mod run;
 mod tokenizer;
 
 pub use crate::core::{Column, DataType, Table, Value};
 pub use crate::error::SqlError;
+pub use crate::parser::{Statement, parse};
 pub use crate::run::Database;
 pub use crate::tokenizer::tokenize;
 
 pub fn execute(sql: &str, database: &mut Database) -> Result<String, SqlError> {
     let tokens = tokenize(sql)?;
-    let result = database.run(tokens)?;
+    let statement = parse(&tokens)?;
+    let result = database.run(statement)?;
     Ok(result.to_string())
 }
 
@@ -44,7 +47,7 @@ mod tests {
     fn create_then_select_query() {
         let mut database = Database { tables: vec![] };
 
-        let Ok(created) = execute("CREATE PETS ( id INT name TEXT )", &mut database) else {
+        let Ok(created) = execute("CREATE PETS ( id INT, name TEXT);", &mut database) else {
             panic!("Got error on create pets");
         };
         let Ok(selected) = execute("select *", &mut database) else {

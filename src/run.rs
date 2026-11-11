@@ -1,6 +1,6 @@
 use crate::core::{Column, Table, Value};
 use crate::error::SqlError;
-use crate::tokenizer::Token;
+use crate::parser::Statement;
 use std::fmt;
 
 pub enum QueryResult {
@@ -30,54 +30,22 @@ pub struct Database {
     pub tables: Vec<Table>,
 }
 impl Database {
-    pub fn run(&mut self, tokens: Vec<Token>) -> Result<QueryResult, SqlError> {
-        match tokens.as_slice() {
-            [Token::Select, Token::Star, ..] => self.select_all(),
-            [Token::Create, rest @ ..] => self.create(rest),
-            _ => Err(SqlError::UnsupportedQuery),
+    pub fn run(&mut self, statement: Statement) -> Result<QueryResult, SqlError> {
+        match statement {
+            Statement::SelectAll => self.select_all(),
+            Statement::CreateTable { name, columns } => Ok(self.create_table(name, columns)),
         }
     }
-
     fn select_all(&self) -> Result<QueryResult, SqlError> {
         let table = self.tables.first().ok_or(SqlError::NoTables)?;
         let (columns, rows) = table.select_all();
         Ok(QueryResult::Rows(columns.clone(), rows.clone()))
     }
 
-    fn create(&mut self, tokens: &[Token]) -> Result<QueryResult, SqlError> {
-        let [name, open, rest @ ..] = tokens else {
-            return Err(SqlError::UnexpectedEnd);
-        };
-        let Token::Name(table_name) = name else {
-            return Err(SqlError::ReservedName(name.to_string()));
-        };
-        if *open != Token::Open {
-            return Err(SqlError::ExpectedOpenParam {
-                found: open.to_string(),
-            });
-        }
-        let Some((close, defs)) = rest.split_last() else {
-            return Err(SqlError::UnexpectedEnd);
-        };
-        if *close != Token::Close {
-            return Err(SqlError::ExpectedCloseParam {
-                found: close.to_string(),
-            });
-        }
-        let columns = defs
-            .chunks(2)
-            .map(|col| match col {
-                [Token::Name(name), Token::Type(data_type)] => Ok(Column {
-                    name: name.clone(),
-                    data_type: data_type.clone(),
-                }),
-                _ => Err(SqlError::InvalidColumnDefinition),
-            })
-            .collect::<Result<Vec<Column>, SqlError>>()?;
-
-        let table = Table::create(table_name.clone(), columns);
+    fn create_table(&mut self, name: String, columns: Vec<Column>) -> QueryResult {
+        let table = Table::create(name, columns);
         self.tables.push(table.clone());
-        Ok(QueryResult::Created(table))
+        QueryResult::Created(table)
     }
 }
 
@@ -119,8 +87,7 @@ mod tests {
         let mut database = Database {
             tables: vec![users_table()],
         };
-        let Ok(QueryResult::Rows(columns, rows)) = database.run(vec![Token::Select, Token::Star])
-        else {
+        let Ok(QueryResult::Rows(columns, rows)) = database.run(Statement::SelectAll) else {
             panic!("expected rows");
         };
 
@@ -140,18 +107,21 @@ mod tests {
     #[test]
     fn run_create() {
         let mut database = Database { tables: vec![] };
-        let tokens = vec![
-            Token::Create,
-            Token::Name("pets".to_string()),
-            Token::Open,
-            Token::Name("id".to_string()),
-            Token::Type(DataType::Int),
-            Token::Name("name".to_string()),
-            Token::Type(DataType::Text),
-            Token::Close,
-        ];
+        let statement = Statement::CreateTable {
+            name: "pets".to_string(),
+            columns: vec![
+                Column {
+                    name: "id".to_string(),
+                    data_type: DataType::Int,
+                },
+                Column {
+                    name: "name".to_string(),
+                    data_type: DataType::Text,
+                },
+            ],
+        };
 
-        let Ok(QueryResult::Created(table)) = database.run(tokens) else {
+        let Ok(QueryResult::Created(table)) = database.run(statement) else {
             panic!("expected created table");
         };
 
@@ -163,11 +133,9 @@ mod tests {
     }
 
     #[test]
-    fn run_unsupported() {
-        let mut database = Database {
-            tables: vec![users_table()],
-        };
-        let result = database.run(vec![Token::Star, Token::Star]);
-        assert!(result.is_err());
+    fn run_select_no_tables() {
+        let mut database = Database::default();
+        let result = database.run(Statement::SelectAll);
+        assert!(matches!(result, Err(SqlError::NoTables)));
     }
 }
