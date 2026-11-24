@@ -47,7 +47,7 @@ mod tests {
     fn create_then_select_query() {
         let mut database = Database { tables: vec![] };
 
-        let Ok(created) = execute("CREATE PETS ( id INT, name TEXT);", &mut database) else {
+        let Ok(created) = execute("CREATE TABLE PETS ( id INT, name TEXT);", &mut database) else {
             panic!("Got error on create pets");
         };
         let Ok(selected) = execute("select *", &mut database) else {

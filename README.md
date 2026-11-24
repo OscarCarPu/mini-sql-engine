@@ -8,7 +8,7 @@ A query goes through three stages, each in its own module:
 
 ```mermaid
 flowchart TD 
-    SQL(["&quot;CREATE users (id INT, name TEXT);&quot;"])
+    SQL(["&quot;CREATE TABLE users (id INT, name TEXT);&quot;"])
     TOK["<b>tokenizer.rs</b><br/>splits text into tokens"]
     PAR["<b>parser.rs</b><br/>checks grammar, builds the AST"]
     RUN["<b>run.rs</b> (Database)<br/>executes against in-memory tables"]

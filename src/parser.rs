@@ -14,7 +14,7 @@ pub fn parse(tokens: &[Token]) -> Result<Statement, SqlError> {
     };
     match tokens {
         [Token::Select, Token::Star] => Ok(Statement::SelectAll),
-        [Token::Create, rest @ ..] => parse_create(rest),
+        [Token::Create, Token::Table, rest @ ..] => parse_create(rest),
         _ => Err(SqlError::UnsupportedQuery),
     }
 }
@@ -75,7 +75,7 @@ mod tests {
     #[test]
     fn create_table() {
         assert_eq!(
-            parse_str("CREATE users (id INT, name TEXT);"),
+            parse_str("CREATE TABLE users (id INT, name TEXT);"),
             Ok(Statement::CreateTable {
                 name: "users".to_string(),
                 columns: vec![
@@ -92,6 +92,14 @@ mod tests {
         );
     }
     #[test]
+    fn create_without_table() {
+        assert_eq!(
+            parse_str("CREATE users (id INT)"),
+            Err(SqlError::UnsupportedQuery)
+        );
+    }
+
+    #[test]
     fn unsupported() {
         assert_eq!(parse_str("* *"), Err(SqlError::UnsupportedQuery));
     }
@@ -99,7 +107,7 @@ mod tests {
     #[test]
     fn create_missing_open() {
         assert_eq!(
-            parse_str("CREATE users id INT)"),
+            parse_str("CREATE TABLE users id INT)"),
             Err(SqlError::ExpectedOpenParam {
                 found: "id".to_string()
             })
@@ -109,11 +117,11 @@ mod tests {
     #[test]
     fn create_invalid_column() {
         assert_eq!(
-            parse_str("CREATE users (id INT name TEXT)"),
+            parse_str("CREATE TABLE users (id INT name TEXT)"),
             Err(SqlError::InvalidColumnDefinition)
         );
         assert_eq!(
-            parse_str("CREATE users ()"),
+            parse_str("CREATE TABLE users ()"),
             Err(SqlError::InvalidColumnDefinition)
         );
     }

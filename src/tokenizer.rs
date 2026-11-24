@@ -11,6 +11,7 @@ pub enum Token {
     Close,
     Comma,
     Semicolon,
+    Table,
     Type(DataType),
     Name(String),
 }
@@ -21,6 +22,7 @@ impl fmt::Display for Token {
             Token::Select => "SELECT",
             Token::Star => "*",
             Token::Create => "CREATE",
+            Token::Table => "TABLE",
             Token::Open => "(",
             Token::Close => ")",
             Token::Comma => ",",
@@ -43,6 +45,7 @@ pub fn tokenize(query: &str) -> Result<Vec<Token>, SqlError> {
         match word.to_uppercase().as_str() {
             "SELECT" => tokens.push(Token::Select),
             "*" => tokens.push(Token::Star),
+            "TABLE" => tokens.push(Token::Table),
             "CREATE" => tokens.push(Token::Create),
             "INT" => tokens.push(Token::Type(DataType::Int)),
             "FLOAT" => tokens.push(Token::Type(DataType::Float)),
@@ -71,12 +74,13 @@ mod tests {
 
     #[test]
     fn tokenize_create() {
-        let result = tokenize("CREATE USERS ( id INT name TEXT )");
+        let result = tokenize("CREATE TABLE USERS ( id INT name TEXT )");
 
         assert_eq!(
             result,
             Ok(vec![
                 Token::Create,
+                Token::Table,
                 Token::Name("USERS".to_string()),
                 Token::Open,
                 Token::Name("id".to_string()),
@@ -90,12 +94,13 @@ mod tests {
 
     #[test]
     fn tokenize_create_unspaced() {
-        let result = tokenize("CREATE USERS (id INT, name TEXT);");
+        let result = tokenize("CREATE TABLE USERS (id INT, name TEXT);");
 
         assert_eq!(
             result,
             Ok(vec![
                 Token::Create,
+                Token::Table,
                 Token::Name("USERS".to_string()),
                 Token::Open,
                 Token::Name("id".to_string()),
