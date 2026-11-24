@@ -40,6 +40,16 @@ fn parse_create(tokens: &[Token]) -> Result<Statement, SqlError> {
         .split(|token| *token == Token::Comma)
         .map(parse_column)
         .collect::<Result<Vec<Column>, SqlError>>()?;
+    if let Some(duplicated) = columns
+        .iter()
+        .enumerate()
+        .find(|(i, c)| columns.iter().skip(i + 1).any(|o| o.name == c.name))
+        .map(|(_, c)| &c.name)
+    {
+        return Err(SqlError::DuplicatedColumnName {
+            name: duplicated.to_string(),
+        });
+    }
     Ok(Statement::CreateTable {
         name: name.clone(),
         columns,

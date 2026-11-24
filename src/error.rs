@@ -24,6 +24,9 @@ pub enum SqlError {
         got: DataType,
     },
     InvalidColumnDefinition,
+    DuplicatedColumnName {
+        name: String,
+    },
 }
 
 impl fmt::Display for SqlError {
@@ -56,6 +59,9 @@ impl fmt::Display for SqlError {
                 )
             }
             SqlError::InvalidColumnDefinition => write!(f, "invalid column definition"),
+            SqlError::DuplicatedColumnName { name } => {
+                write!(f, "duplicated column name: '{}'", name)
+            }
         }
     }
 }
